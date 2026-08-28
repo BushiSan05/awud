@@ -20,7 +20,20 @@
         <div class="card">
             <canvas id="fireworks-canvas"></canvas>
 
-            <div class="panel active" id="panel-start">
+            <div class="panel active" id="panel-user">
+                <div class="identity-mark">USER PROFILE</div>
+                <div class="go-title">Who is calling?</div>
+                <div class="identity-copy">Enter a name or nickname before choosing a game.</div>
+                <form class="identity-form" id="identity-form">
+                    <label class="sr-only" for="user-name">Name or nickname</label>
+                    <input id="user-name" type="text" maxlength="24" autocomplete="nickname"
+                        placeholder="Name or nickname" required>
+                    <button class="btn-primary" type="submit">Enter the call</button>
+                </form>
+                <div class="identity-status" id="identity-status" aria-live="polite"></div>
+            </div>
+
+            <div class="panel" id="panel-start">
                 <div class="mode-tabs">
                     <button class="mode-tab active" id="tab-flags" data-mode="flags">
                         <span class="mode-tab-icon">🏳️</span> Flags
@@ -38,13 +51,14 @@
                 <div class="mic-status" id="mic-status">Checking microphone / speech support…</div>
                 <button class="btn-primary" id="start-btn" disabled>Start listening</button>
                 <div class="high-score-strip">
-                    <span>Operator best</span>
+                    <span>User best</span>
                     <b id="hs-display">—</b>
                 </div>
                 <button class="audio-toggle" id="audio-toggle" type="button" aria-pressed="false"
                     title="Mute music and sound effects">
                     <span id="audio-icon">♫</span> <span id="audio-label">Sound on</span>
                 </button>
+                <button class="change-user-btn" id="change-user-btn" type="button">Change user</button>
             </div>
 
             <div class="panel" id="panel-game">
@@ -83,6 +97,13 @@
             </div>
 
             <div class="panel" id="panel-over">
+                <div class="achievement-profile" id="achievement-profile" hidden>
+                    <div class="achievement-avatar" id="achievement-avatar"></div>
+                    <div>
+                        <div class="achievement-name" id="achievement-name"></div>
+                        <div class="achievement-label">USER BEST</div>
+                    </div>
+                </div>
                 <div class="go-title">Round over</div>
                 <div class="go-answer">That one was <b id="go-answer">—</b></div>
                 <div class="go-stats">
@@ -95,7 +116,7 @@
                         <div class="value" id="final-best">0</div>
                     </div>
                 </div>
-                <div class="newbest" id="newbest-msg" style="display:none;">★ New operator best ★</div>
+                <div class="newbest" id="newbest-msg" style="display:none;">★ New user best ★</div>
                 <button class="btn-primary" id="replay-btn">Call another round</button>
                 <button class="btn-secondary" id="menu-btn-over">← Back to menu</button>
             </div>

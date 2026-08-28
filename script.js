@@ -14,31 +14,113 @@
     let currentMode = 'flags';
     const RADIUS = 98, CIRC = 2 * Math.PI * RADIUS, ROUND_MS = 5000;
     const $ = id => document.getElementById(id);
-    const panelStart = $('panel-start'), panelGame = $('panel-game'), panelOver = $('panel-over'), micStatus = $('mic-status'), startBtn = $('start-btn'), hsDisplay = $('hs-display'), scoreVal = $('score-val'), bestVal = $('best-val'), visualDisplay = $('visual-display'), dialRing = $('dial-ring'), timerNum = $('timer-num'), micIndicator = $('mic-indicator'), transcriptBox = $('transcript-box'), transcriptPlaceholder = $('transcript-placeholder'), feedbackFlash = $('feedback-flash'), stampText = $('stamp-text'), goAnswer = $('go-answer'), finalScore = $('final-score'), finalBest = $('final-best'), newbestMsg = $('newbest-msg'), goBestStat = $('go-best-stat'), replayBtn = $('replay-btn'), menuBtn = $('menu-btn'), menuBtnOver = $('menu-btn-over'), fwCanvas = $('fireworks-canvas'), fwCtx = fwCanvas.getContext('2d'), footerNote = $('footer-note'), useTypingBtn = $('use-typing-btn'), typeFallback = $('type-fallback'), typeInput = $('type-input'), typeSubmit = $('type-submit'), brandWordEl = $('brand-word'), eyebrowEl = $('eyebrow-text'), subEl = $('sub-text'), rulesList = $('rules-list'), tabFlags = $('tab-flags'), tabAnimals = $('tab-animals'), audioToggle = $('audio-toggle'), audioIcon = $('audio-icon'), audioLabel = $('audio-label');
+    const panelUser = $('panel-user'), identityForm = $('identity-form'), userNameInput = $('user-name'), identityStatus = $('identity-status'), achievementProfile = $('achievement-profile'), achievementAvatar = $('achievement-avatar'), achievementName = $('achievement-name');
+    const panelStart = $('panel-start'), panelGame = $('panel-game'), panelOver = $('panel-over'), micStatus = $('mic-status'), startBtn = $('start-btn'), hsDisplay = $('hs-display'), scoreVal = $('score-val'), bestVal = $('best-val'), visualDisplay = $('visual-display'), dialRing = $('dial-ring'), timerNum = $('timer-num'), micIndicator = $('mic-indicator'), transcriptBox = $('transcript-box'), transcriptPlaceholder = $('transcript-placeholder'), feedbackFlash = $('feedback-flash'), stampText = $('stamp-text'), goAnswer = $('go-answer'), finalScore = $('final-score'), finalBest = $('final-best'), newbestMsg = $('newbest-msg'), goBestStat = $('go-best-stat'), replayBtn = $('replay-btn'), menuBtn = $('menu-btn'), menuBtnOver = $('menu-btn-over'), changeUserBtn = $('change-user-btn'), fwCanvas = $('fireworks-canvas'), fwCtx = fwCanvas.getContext('2d'), footerNote = $('footer-note'), useTypingBtn = $('use-typing-btn'), typeFallback = $('type-fallback'), typeInput = $('type-input'), typeSubmit = $('type-submit'), brandWordEl = $('brand-word'), eyebrowEl = $('eyebrow-text'), subEl = $('sub-text'), rulesList = $('rules-list'), tabFlags = $('tab-flags'), tabAnimals = $('tab-animals'), audioToggle = $('audio-toggle'), audioIcon = $('audio-icon'), audioLabel = $('audio-label');
     dialRing.setAttribute('stroke-dasharray', CIRC.toFixed(2));
     let highScore = 0, score = 0, deck = [], deckIndex = 0, current = null, timerStart = 0, timerRAF = null, roundActive = false, recognition = null, speechSupported = false, usingTyping = false, animalRevealed = false, audioContext = null, musicGain = null, musicTimer = null, soundMuted = false;
+    let userName = '', userImageUrl = null, dancerJumpTimer = null;
     const flagUrl = code => 'https://flagcdn.com/w320/' + code + '.png';
+    const userImageExtensions = ['png', 'jpg', 'jpeg', 'webp'];
+
+    function scheduleDancerJump(dancer) {
+        clearTimeout(dancerJumpTimer);
+        dancerJumpTimer = setTimeout(() => {
+            dancer.classList.remove('jump');
+            void dancer.offsetWidth;
+            dancer.classList.add('jump');
+            dancer.addEventListener('animationend', () => dancer.classList.remove('jump'), { once: true });
+            scheduleDancerJump(dancer);
+        }, 1200 + Math.random() * 2600);
+    }
 
     function ensureAudio() {
-        if (!audioContext) { const AudioContext = window.AudioContext || window.webkitAudioContext; if (!AudioContext) return false; audioContext = new AudioContext(); musicGain = audioContext.createGain(); musicGain.gain.value = .12; musicGain.connect(audioContext.destination); }
-        if (audioContext.state === 'suspended') audioContext.resume(); return true;
+        if (!audioContext) { const AudioContext = window.AudioContext || window.webkitAudioContext; if (!AudioContext) return false; audioContext = new AudioContext(); musicGain = audioContext.createGain(); musicGain.gain.value = .5; musicGain.connect(audioContext.destination); }
+        if (audioContext.state === 'suspended') audioContext.resume().catch(() => { }); return true;
     }
     function playTone(frequency, duration, type, volume, delay) {
         if (soundMuted || !ensureAudio()) return; const start = audioContext.currentTime + (delay || 0), oscillator = audioContext.createOscillator(), gain = audioContext.createGain(); oscillator.type = type || 'sine'; oscillator.frequency.setValueAtTime(frequency, start); gain.gain.setValueAtTime(.0001, start); gain.gain.exponentialRampToValueAtTime(volume || .06, start + .015); gain.gain.exponentialRampToValueAtTime(.0001, start + duration); oscillator.connect(gain); gain.connect(audioContext.destination); oscillator.start(start); oscillator.stop(start + duration + .02);
     }
     function startMusic() {
         if (soundMuted || !ensureAudio() || musicTimer) return; const notes = [196, 247, 294, 247, 220, 262, 330, 262]; let noteIndex = 0;
-        const playNote = () => { if (soundMuted || !audioContext) return; const oscillator = audioContext.createOscillator(), gain = audioContext.createGain(), now = audioContext.currentTime; oscillator.type = 'triangle'; oscillator.frequency.value = notes[noteIndex++ % notes.length]; gain.gain.setValueAtTime(.0001, now); gain.gain.exponentialRampToValueAtTime(.08, now + .03); gain.gain.exponentialRampToValueAtTime(.0001, now + .42); oscillator.connect(gain); gain.connect(musicGain); oscillator.start(now); oscillator.stop(now + .45); };
+        const playNote = () => { if (soundMuted || !audioContext) return; const oscillator = audioContext.createOscillator(), gain = audioContext.createGain(), now = audioContext.currentTime; oscillator.type = 'triangle'; oscillator.frequency.value = notes[noteIndex++ % notes.length]; gain.gain.setValueAtTime(.0001, now); gain.gain.exponentialRampToValueAtTime(.18, now + .03); gain.gain.exponentialRampToValueAtTime(.0001, now + .42); oscillator.connect(gain); gain.connect(musicGain); oscillator.start(now); oscillator.stop(now + .45); };
         playNote(); musicTimer = setInterval(playNote, 500);
     }
     function stopMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } }
     function updateAudioToggle() { audioToggle.setAttribute('aria-pressed', String(soundMuted)); audioToggle.title = soundMuted ? 'Enable music and sound effects' : 'Mute music and sound effects'; audioIcon.textContent = soundMuted ? '♪̸' : '♫'; audioLabel.textContent = soundMuted ? 'Sound off' : 'Sound on'; }
     audioToggle.addEventListener('click', () => { soundMuted = !soundMuted; updateAudioToggle(); if (soundMuted) stopMusic(); else if (roundActive) startMusic(); });
+    function unlockAudio() {
+        if (!soundMuted) {
+            ensureAudio();
+            if (!musicTimer) startMusic();
+        }
+    }
+    document.addEventListener('pointerdown', unlockAudio, { once: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
     function applyModeText() { const cfg = MODES[currentMode]; brandWordEl.textContent = cfg.brandWord; eyebrowEl.textContent = cfg.eyebrow; subEl.textContent = cfg.sub; rulesList.children[0].innerHTML = '<span class="num">01</span> ' + cfg.rule1; rulesList.children[1].innerHTML = '<span class="num">02</span> ' + cfg.rule2; transcriptPlaceholder.textContent = cfg.placeholder; typeInput.placeholder = cfg.typePlaceholder; tabFlags.classList.toggle('active', currentMode === 'flags'); tabAnimals.classList.toggle('active', currentMode === 'animals'); }
     async function loadHighScore() { const key = MODES[currentMode].hsKey; highScore = 0; try { const res = await window.storage.get(key, false); if (res && res.value != null) highScore = parseInt(res.value, 10) || 0; } catch (e) { } hsDisplay.textContent = highScore; bestVal.textContent = highScore; }
     async function saveHighScore() { try { await window.storage.set(MODES[currentMode].hsKey, String(highScore), false); } catch (e) { } }
     function switchMode(mode) { if (mode === currentMode) return; currentMode = mode; applyModeText(); loadHighScore(); }
     tabFlags.addEventListener('click', () => switchMode('flags')); tabAnimals.addEventListener('click', () => switchMode('animals'));
+    function userImageSlug(name) { return name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+    function preloadUserImage(name) {
+        const slug = userImageSlug(name);
+        const urls = userImageExtensions.map(extension => 'assets/images/' + slug + '.' + extension);
+        return Promise.all(urls.map(url => new Promise(resolve => {
+            const image = new Image();
+            image.onload = () => resolve(url);
+            image.onerror = () => resolve(null);
+            image.src = url;
+        }))).then(results => results.find(Boolean) || null);
+    }
+    function renderAchievementProfile() {
+        achievementName.textContent = userName;
+        achievementAvatar.replaceChildren();
+        const dancer = document.createElement('div');
+        dancer.className = 'dancer';
+        const head = document.createElement('div');
+        head.className = 'dancer-head';
+        if (userImageUrl) {
+            head.classList.add('has-image');
+            const image = document.createElement('img');
+            image.src = userImageUrl;
+            image.alt = userName;
+            head.appendChild(image);
+        } else {
+            head.textContent = userName.charAt(0).toUpperCase();
+        }
+        dancer.append(head);
+        ['dancer-arm dancer-arm-left', 'dancer-arm dancer-arm-right', 'dancer-body', 'dancer-leg dancer-leg-left', 'dancer-leg dancer-leg-right'].forEach(className => {
+            const part = document.createElement('div');
+            part.className = className;
+            dancer.appendChild(part);
+        });
+        achievementAvatar.appendChild(dancer);
+        scheduleDancerJump(dancer);
+    }
+    identityForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        const name = userNameInput.value.trim();
+        if (!name) return;
+        const submitButton = identityForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        identityStatus.textContent = 'Loading user profile…';
+        userName = name;
+        userImageUrl = await preloadUserImage(userName);
+        renderAchievementProfile();
+        identityStatus.textContent = '';
+        submitButton.disabled = false;
+        showPanel(panelStart);
+    });
+    function changeUser() {
+        stopRound();
+        stopMusic();
+        clearTimeout(dancerJumpTimer);
+        identityStatus.textContent = '';
+        userNameInput.value = userName;
+        userNameInput.focus();
+        showPanel(panelUser);
+    }
+    changeUserBtn.addEventListener('click', changeUser);
     function normalize(str) { return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim(); }
     function matchesItem(spoken, item) { const n = normalize(spoken); return !!n && item.aliases.some(alias => n === alias || n.includes(alias)); }
     function shuffledDeck() { const arr = MODES[currentMode].items.slice(); for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
@@ -52,25 +134,25 @@
         micStatus.textContent = 'Microphone ready. Tap start and speak clearly for each flag.'; startBtn.disabled = false;
     }
     function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
-    function showPanel(panel) { [panelStart, panelGame, panelOver].forEach(p => p.classList.remove('active')); panel.classList.add('active'); }
-    function startGame() { ensureAudio(); startMusic(); playTone(330, .16, 'sine', .05); score = 0; scoreVal.textContent = '0'; bestVal.textContent = highScore; deck = shuffledDeck(); deckIndex = 0; showPanel(panelGame); typeFallback.style.display = usingTyping ? 'flex' : 'none'; micIndicator.style.visibility = usingTyping ? 'hidden' : 'visible'; nextRound(); }
+    function showPanel(panel) { [panelUser, panelStart, panelGame, panelOver].forEach(p => p.classList.remove('active')); panel.classList.add('active'); }
+    function startGame() { ensureAudio(); startMusic(); playTone(330, .16, 'sine', .08); score = 0; scoreVal.textContent = '0'; bestVal.textContent = highScore; deck = shuffledDeck(); deckIndex = 0; showPanel(panelGame); typeFallback.style.display = usingTyping ? 'flex' : 'none'; micIndicator.style.visibility = usingTyping ? 'hidden' : 'visible'; nextRound(); }
     function goToMenu() { stopRound(); stopMusic(); current = null; fwRunning = false; fwParticles = []; fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height); newbestMsg.classList.remove('show'); goBestStat.classList.remove('new'); loadHighScore(); showPanel(panelStart); }
     function renderVisual(item, silhouette) { if (currentMode === 'flags') visualDisplay.innerHTML = '<img src="' + flagUrl(item.code) + '" alt="Flag to guess">'; else { animalRevealed = !silhouette; visualDisplay.innerHTML = '<span class="' + (silhouette ? 'animal-emoji' : 'animal-emoji revealed') + '">' + item.emoji + '</span>'; } }
     function revealAnimal() { if (currentMode !== 'animals' || animalRevealed) return; animalRevealed = true; const span = visualDisplay.querySelector('.animal-emoji'); if (span) span.classList.add('revealed'); }
     function nextRound() { if (deckIndex >= deck.length) { deck = shuffledDeck(); deckIndex = 0; } current = deck[deckIndex++]; renderVisual(current, true); transcriptBox.classList.remove('listening'); transcriptBox.innerHTML = '<span class="placeholder">' + MODES[currentMode].placeholder + '</span>'; typeInput.value = ''; dialRing.style.stroke = ''; roundActive = true; timerStart = performance.now(); if (!usingTyping && speechSupported) try { recognition.start(); } catch (e) { } if (usingTyping) typeInput.focus(); tick(); }
     function tick() { if (!roundActive) return; const elapsed = performance.now() - timerStart, remaining = Math.max(0, ROUND_MS - elapsed), frac = remaining / ROUND_MS; dialRing.style.strokeDashoffset = (CIRC * (1 - frac)).toFixed(2); timerNum.textContent = (remaining / 1000).toFixed(1) + 's'; dialRing.classList.toggle('urgent', frac < .25); if (remaining <= 0) { handleTimeout(); return; } timerRAF = requestAnimationFrame(tick); }
     function stopRound() { roundActive = false; if (timerRAF) cancelAnimationFrame(timerRAF); if (recognition && !usingTyping) try { recognition.stop(); } catch (e) { } }
-    function handleCorrect() { if (!roundActive) return; stopRound(); score++; scoreVal.textContent = String(score); revealAnimal(); playTone(523, .14, 'sine', .07); playTone(659, .2, 'sine', .06, .1); flashStamp('VERIFIED', 'var(--teal)'); setTimeout(nextRound, 650); }
-    function handleTimeout() { stopRound(); playTone(146, .35, 'sawtooth', .055); revealAnimal(); if (currentMode === 'animals') setTimeout(endGame, 700); else endGame(); }
+    function handleCorrect() { if (!roundActive) return; stopRound(); score++; scoreVal.textContent = String(score); revealAnimal(); playTone(523, .14, 'sine', .11); playTone(659, .2, 'sine', .1, .1); flashStamp('VERIFIED', 'var(--teal)'); setTimeout(nextRound, 650); }
+    function handleTimeout() { stopRound(); playTone(146, .35, 'sawtooth', .09); revealAnimal(); if (currentMode === 'animals') setTimeout(endGame, 700); else endGame(); }
     function flashStamp(text, color) { stampText.textContent = text; stampText.style.color = color; stampText.style.borderColor = color; feedbackFlash.classList.remove('show'); void feedbackFlash.offsetWidth; feedbackFlash.classList.add('show'); }
-    async function endGame() { goAnswer.textContent = current ? current.name : '—'; finalScore.textContent = String(score); let isNew = false; if (score > highScore && score > 0) { highScore = score; isNew = true; await saveHighScore(); } finalBest.textContent = String(highScore); hsDisplay.textContent = String(highScore); newbestMsg.classList.remove('show'); goBestStat.classList.remove('new'); if (isNew) { playTone(523, .16, 'triangle', .07); playTone(659, .16, 'triangle', .07, .12); playTone(784, .28, 'triangle', .07, .24); newbestMsg.style.display = 'block'; void newbestMsg.offsetWidth; newbestMsg.classList.add('show'); goBestStat.classList.add('new'); launchFireworks(); } else newbestMsg.style.display = 'none'; showPanel(panelOver); }
+    async function endGame() { goAnswer.textContent = current ? current.name : '—'; finalScore.textContent = String(score); let isNew = false; if (score > highScore && score > 0) { highScore = score; isNew = true; await saveHighScore(); } finalBest.textContent = String(highScore); hsDisplay.textContent = String(highScore); newbestMsg.classList.remove('show'); goBestStat.classList.remove('new'); achievementProfile.hidden = !isNew; if (isNew) { playTone(523, .16, 'triangle', .1); playTone(659, .16, 'triangle', .1, .12); playTone(784, .28, 'triangle', .1, .24); newbestMsg.style.display = 'block'; void newbestMsg.offsetWidth; newbestMsg.classList.add('show'); goBestStat.classList.add('new'); launchFireworks(); } else newbestMsg.style.display = 'none'; showPanel(panelOver); }
     let fwParticles = [], fwAnimHandle = null, fwRunning = false;
     function resizeFwCanvas() { const rect = panelOver.parentElement.getBoundingClientRect(); fwCanvas.width = rect.width; fwCanvas.height = rect.height; }
     const FW_COLORS = ['#c1473a', '#c9a24b', '#3f7268', '#1c2b45', '#e8d9b5'];
     function spawnBurst(x, y) { const count = 26 + Math.floor(Math.random() * 10); for (let i = 0; i < count; i++) { const angle = Math.PI * 2 * i / count + Math.random() * .2, speed = 1.5 + Math.random() * 3.2; fwParticles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 1, decay: .012 + Math.random() * .012, color: FW_COLORS[Math.floor(Math.random() * FW_COLORS.length)], size: 2 + Math.random() * 2 }); } }
     function launchFireworks() { resizeFwCanvas(); fwParticles = []; fwRunning = true; const w = fwCanvas.width, h = fwCanvas.height, bursts = [{ x: w * .28, y: h * .32, delay: 0 }, { x: w * .72, y: h * .24, delay: 260 }, { x: w * .5, y: h * .4, delay: 520 }, { x: w * .35, y: h * .28, delay: 900 }, { x: w * .65, y: h * .34, delay: 1150 }]; bursts.forEach(b => setTimeout(() => { if (fwRunning) spawnBurst(b.x, b.y); }, b.delay)); if (fwAnimHandle) cancelAnimationFrame(fwAnimHandle); fwStep(); setTimeout(() => { fwRunning = false; }, 2600); }
     function fwStep() { fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height); for (let i = fwParticles.length - 1; i >= 0; i--) { const p = fwParticles[i]; p.vy += .045; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.life -= p.decay; if (p.life <= 0) { fwParticles.splice(i, 1); continue; } fwCtx.globalAlpha = Math.max(p.life, 0); fwCtx.fillStyle = p.color; fwCtx.beginPath(); fwCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); fwCtx.fill(); } fwCtx.globalAlpha = 1; if (fwRunning || fwParticles.length > 0) fwAnimHandle = requestAnimationFrame(fwStep); else fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height); }
-    function submitTyped() { if (!roundActive) return; const val = typeInput.value; if (val && current && matchesItem(val, current)) handleCorrect(); else { playTone(220, .16, 'square', .045); playTone(165, .2, 'square', .04, .12); typeInput.value = ''; typeInput.placeholder = 'Not quite \u2014 try again\u2026'; } }
+    function submitTyped() { if (!roundActive) return; const val = typeInput.value; if (val && current && matchesItem(val, current)) handleCorrect(); else { playTone(220, .16, 'square', .08); playTone(165, .2, 'square', .07, .12); typeInput.value = ''; typeInput.placeholder = 'Not quite \u2014 try again\u2026'; } }
     typeSubmit.addEventListener('click', submitTyped); typeInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitTyped(); });
     useTypingBtn.addEventListener('click', () => { usingTyping = true; speechSupported = false; if (recognition) try { recognition.stop(); } catch (e) { } footerNote.style.display = 'none'; micStatus.textContent = 'Typing mode enabled. Tap start when ready.'; micStatus.classList.remove('bad'); startBtn.disabled = false; startBtn.textContent = 'Start round (typing mode)'; });
     startBtn.addEventListener('click', startGame); replayBtn.addEventListener('click', startGame); menuBtn.addEventListener('click', goToMenu); menuBtnOver.addEventListener('click', goToMenu);
