@@ -40,6 +40,21 @@
     function playTone(frequency, duration, type, volume, delay) {
         if (soundMuted || !ensureAudio()) return; const start = audioContext.currentTime + (delay || 0), oscillator = audioContext.createOscillator(), gain = audioContext.createGain(); oscillator.type = type || 'sine'; oscillator.frequency.setValueAtTime(frequency, start); gain.gain.setValueAtTime(.0001, start); gain.gain.exponentialRampToValueAtTime(volume || .06, start + .015); gain.gain.exponentialRampToValueAtTime(.0001, start + duration); oscillator.connect(gain); gain.connect(audioContext.destination); oscillator.start(start); oscillator.stop(start + duration + .02);
     }
+    function playCelebrationMusic() {
+        stopMusic();
+        const melody = [523, 659, 784, 659, 880, 988, 1047, 1319];
+        melody.forEach((frequency, index) => {
+            playTone(frequency, .28, 'triangle', .11, index * .22);
+        });
+        [262, 330, 392, 330, 440, 494, 523, 659].forEach((frequency, index) => {
+            playTone(frequency, .34, 'sine', .07, index * .22);
+        });
+        [131, 165, 196, 220].forEach((frequency, index) => {
+            playTone(frequency, .42, 'triangle', .1, index * .44);
+        });
+        playTone(1047, .8, 'sine', .09, 1.76);
+        playTone(1319, .9, 'triangle', .1, 1.76);
+    }
     function startMusic() {
         if (soundMuted || !ensureAudio() || musicTimer) return; const notes = [196, 247, 294, 247, 220, 262, 330, 262]; let noteIndex = 0;
         const playNote = () => { if (soundMuted || !audioContext) return; const oscillator = audioContext.createOscillator(), gain = audioContext.createGain(), now = audioContext.currentTime; oscillator.type = 'triangle'; oscillator.frequency.value = notes[noteIndex++ % notes.length]; gain.gain.setValueAtTime(.0001, now); gain.gain.exponentialRampToValueAtTime(.18, now + .03); gain.gain.exponentialRampToValueAtTime(.0001, now + .42); oscillator.connect(gain); gain.connect(musicGain); oscillator.start(now); oscillator.stop(now + .45); };
@@ -145,7 +160,7 @@
     function handleCorrect() { if (!roundActive) return; stopRound(); score++; scoreVal.textContent = String(score); revealAnimal(); playTone(523, .14, 'sine', .11); playTone(659, .2, 'sine', .1, .1); flashStamp('VERIFIED', 'var(--teal)'); setTimeout(nextRound, 650); }
     function handleTimeout() { stopRound(); playTone(146, .35, 'sawtooth', .09); revealAnimal(); if (currentMode === 'animals') setTimeout(endGame, 700); else endGame(); }
     function flashStamp(text, color) { stampText.textContent = text; stampText.style.color = color; stampText.style.borderColor = color; feedbackFlash.classList.remove('show'); void feedbackFlash.offsetWidth; feedbackFlash.classList.add('show'); }
-    async function endGame() { goAnswer.textContent = current ? current.name : '—'; finalScore.textContent = String(score); let isNew = false; if (score > highScore && score > 0) { highScore = score; isNew = true; await saveHighScore(); } finalBest.textContent = String(highScore); hsDisplay.textContent = String(highScore); newbestMsg.classList.remove('show'); goBestStat.classList.remove('new'); achievementProfile.hidden = !isNew; if (isNew) { playTone(523, .16, 'triangle', .1); playTone(659, .16, 'triangle', .1, .12); playTone(784, .28, 'triangle', .1, .24); newbestMsg.style.display = 'block'; void newbestMsg.offsetWidth; newbestMsg.classList.add('show'); goBestStat.classList.add('new'); launchFireworks(); } else newbestMsg.style.display = 'none'; showPanel(panelOver); }
+    async function endGame() { goAnswer.textContent = current ? current.name : '—'; finalScore.textContent = String(score); let isNew = false; if (score > highScore && score > 0) { highScore = score; isNew = true; await saveHighScore(); } finalBest.textContent = String(highScore); hsDisplay.textContent = String(highScore); newbestMsg.classList.remove('show'); goBestStat.classList.remove('new'); achievementProfile.hidden = !isNew; if (isNew) { playCelebrationMusic(); newbestMsg.style.display = 'block'; void newbestMsg.offsetWidth; newbestMsg.classList.add('show'); goBestStat.classList.add('new'); launchFireworks(); } else newbestMsg.style.display = 'none'; showPanel(panelOver); }
     let fwParticles = [], fwAnimHandle = null, fwRunning = false;
     function resizeFwCanvas() { const rect = panelOver.parentElement.getBoundingClientRect(); fwCanvas.width = rect.width; fwCanvas.height = rect.height; }
     const FW_COLORS = ['#c1473a', '#c9a24b', '#3f7268', '#1c2b45', '#e8d9b5'];
