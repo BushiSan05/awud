@@ -1,92 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FLAGCALL — Say the Flag</title>
-<link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FLAGCALL — Say the Flag</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
 
-<div class="stage">
-  <div class="masthead">
-    <div class="eyebrow" id="eyebrow-text">Voice · Geography · Against the clock</div>
-    <h1><span id="brand-word">FLAG</span><span>CALL</span></h1>
-    <div class="sub" id="sub-text">A flag appears. You say the country. Five seconds on the clock.</div>
-  </div>
-
-  <div class="card">
-    <canvas id="fireworks-canvas"></canvas>
-
-    <div class="panel active" id="panel-start">
-      <div class="mode-tabs">
-        <button class="mode-tab active" id="tab-flags" data-mode="flags">
-          <span class="mode-tab-icon">🏳️</span> Flags
-        </button>
-        <button class="mode-tab" id="tab-animals" data-mode="animals">
-          <span class="mode-tab-icon">🐾</span> Animals
-        </button>
-      </div>
-      <ul class="rules" id="rules-list">
-        <li><span class="num">01</span> A flag is shown. Say the country's name out loud.</li>
-        <li><span class="num">02</span> You have 5 seconds per flag before the call is missed.</li>
-        <li><span class="num">03</span> One miss ends the round — chain as many correct calls as you can.</li>
-      </ul>
-      <div class="mic-status" id="mic-status">Checking microphone / speech support…</div>
-      <button class="btn-primary" id="start-btn" disabled>Start listening</button>
-      <div class="high-score-strip">
-        <span>Operator best</span>
-        <b id="hs-display">—</b>
-      </div>
-      <button class="audio-toggle" id="audio-toggle" type="button" aria-pressed="false" title="Mute music and sound effects">
-        <span id="audio-icon">♫</span> <span id="audio-label">Sound on</span>
-      </button>
-    </div>
-
-    <div class="panel" id="panel-game">
-      <button class="menu-btn" id="menu-btn" title="Back to menu">← Menu</button>
-      <div class="hud">
-        <div class="hud-block">
-          <div class="label">Score</div>
-          <div class="value" id="score-val">0</div>
+    <div class="stage">
+        <div class="masthead">
+            <div class="eyebrow" id="eyebrow-text">Voice · Geography · Against the clock</div>
+            <h1><span id="brand-word">FLAG</span><span>CALL</span></h1>
+            <div class="sub" id="sub-text">A flag appears. You say the country. Five seconds on the clock.</div>
         </div>
-        <div class="hud-block right">
-          <div class="label">Best</div>
-          <div class="value" id="best-val">0</div>
+
+        <div class="card">
+            <canvas id="fireworks-canvas"></canvas>
+
+            <div class="panel active" id="panel-start">
+                <div class="mode-tabs">
+                    <button class="mode-tab active" id="tab-flags" data-mode="flags">
+                        <span class="mode-tab-icon">🏳️</span> Flags
+                    </button>
+                    <button class="mode-tab" id="tab-animals" data-mode="animals">
+                        <span class="mode-tab-icon">🐾</span> Animals
+                    </button>
+                </div>
+                <ul class="rules" id="rules-list">
+                    <li><span class="num">01</span> A flag is shown. Say the country's name out loud.</li>
+                    <li><span class="num">02</span> You have 5 seconds per flag before the call is missed.</li>
+                    <li><span class="num">03</span> One miss ends the round — chain as many correct calls as you can.
+                    </li>
+                </ul>
+                <div class="mic-status" id="mic-status">Checking microphone / speech support…</div>
+                <button class="btn-primary" id="start-btn" disabled>Start listening</button>
+                <div class="high-score-strip">
+                    <span>Operator best</span>
+                    <b id="hs-display">—</b>
+                </div>
+                <button class="audio-toggle" id="audio-toggle" type="button" aria-pressed="false"
+                    title="Mute music and sound effects">
+                    <span id="audio-icon">♫</span> <span id="audio-label">Sound on</span>
+                </button>
+            </div>
+
+            <div class="panel" id="panel-game">
+                <button class="menu-btn" id="menu-btn" title="Back to menu">← Menu</button>
+                <div class="hud">
+                    <div class="hud-block">
+                        <div class="label">Score</div>
+                        <div class="value" id="score-val">0</div>
+                    </div>
+                    <div class="hud-block right">
+                        <div class="label">Best</div>
+                        <div class="value" id="best-val">0</div>
+                    </div>
+                </div>
+                <div class="dial-wrap">
+                    <svg viewBox="0 0 220 220">
+                        <circle class="dial-ring-bg" cx="110" cy="110" r="98"></circle>
+                        <circle class="dial-ring" id="dial-ring" cx="110" cy="110" r="98" stroke-dasharray="615.75"
+                            stroke-dashoffset="0"></circle>
+                    </svg>
+                    <div class="visual-display" id="visual-display"></div>
+                    <div class="timer-num" id="timer-num">5.0s</div>
+                    <div class="feedback-flash" id="feedback-flash">
+                        <div class="stamp" id="stamp-text">VERIFIED</div>
+                    </div>
+                </div>
+                <div class="mic-indicator" id="mic-indicator" style="visibility:hidden;">
+                    <div class="mic-dot"></div> Listening
+                </div>
+                <div class="transcript-box" id="transcript-box"><span class="placeholder"
+                        id="transcript-placeholder">Say the country name…</span></div>
+                <div class="type-fallback" id="type-fallback" style="display:none;">
+                    <input type="text" id="type-input" placeholder="Type the country name…" autocomplete="off">
+                    <button id="type-submit">Call it</button>
+                </div>
+            </div>
+
+            <div class="panel" id="panel-over">
+                <div class="go-title">Round over</div>
+                <div class="go-answer">That one was <b id="go-answer">—</b></div>
+                <div class="go-stats">
+                    <div class="go-stat">
+                        <div class="label">Score</div>
+                        <div class="value" id="final-score">0</div>
+                    </div>
+                    <div class="go-stat" id="go-best-stat">
+                        <div class="label">Best</div>
+                        <div class="value" id="final-best">0</div>
+                    </div>
+                </div>
+                <div class="newbest" id="newbest-msg" style="display:none;">★ New operator best ★</div>
+                <button class="btn-primary" id="replay-btn">Call another round</button>
+                <button class="btn-secondary" id="menu-btn-over">← Back to menu</button>
+            </div>
+
+            <div class="footer-note" id="footer-note" style="display:none;">No mic access — <button
+                    id="use-typing-btn">type your answers instead</button></div>
         </div>
-      </div>
-      <div class="dial-wrap">
-        <svg viewBox="0 0 220 220">
-          <circle class="dial-ring-bg" cx="110" cy="110" r="98"></circle>
-          <circle class="dial-ring" id="dial-ring" cx="110" cy="110" r="98" stroke-dasharray="615.75" stroke-dashoffset="0"></circle>
-        </svg>
-        <div class="visual-display" id="visual-display"></div>
-        <div class="timer-num" id="timer-num">5.0s</div>
-        <div class="feedback-flash" id="feedback-flash"><div class="stamp" id="stamp-text">VERIFIED</div></div>
-      </div>
-      <div class="mic-indicator" id="mic-indicator" style="visibility:hidden;"><div class="mic-dot"></div> Listening</div>
-      <div class="transcript-box" id="transcript-box"><span class="placeholder" id="transcript-placeholder">Say the country name…</span></div>
-      <div class="type-fallback" id="type-fallback" style="display:none;">
-        <input type="text" id="type-input" placeholder="Type the country name…" autocomplete="off">
-        <button id="type-submit">Call it</button>
-      </div>
     </div>
-
-    <div class="panel" id="panel-over">
-      <div class="go-title">Round over</div>
-      <div class="go-answer">That one was <b id="go-answer">—</b></div>
-      <div class="go-stats">
-        <div class="go-stat"><div class="label">Score</div><div class="value" id="final-score">0</div></div>
-        <div class="go-stat" id="go-best-stat"><div class="label">Best</div><div class="value" id="final-best">0</div></div>
-      </div>
-      <div class="newbest" id="newbest-msg" style="display:none;">★ New operator best ★</div>
-      <button class="btn-primary" id="replay-btn">Call another round</button>
-      <button class="btn-secondary" id="menu-btn-over">← Back to menu</button>
-    </div>
-
-    <div class="footer-note" id="footer-note" style="display:none;">No mic access — <button id="use-typing-btn">type your answers instead</button></div>
-  </div>
-</div>
-<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
+
 </html>
