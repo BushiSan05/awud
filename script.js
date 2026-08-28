@@ -145,12 +145,23 @@
             .filter(alias => alias.startsWith(n));
         return matchingAliases.length === 1 && item.aliases.some(alias => alias.startsWith(n));
     }
+    function renderTranscript(text) {
+        transcriptBox.replaceChildren();
+        if (text) {
+            transcriptBox.textContent = text;
+            return;
+        }
+        const placeholder = document.createElement('span');
+        placeholder.className = 'placeholder';
+        placeholder.textContent = MODES[currentMode].placeholder;
+        transcriptBox.appendChild(placeholder);
+    }
     function shuffledDeck() { const arr = MODES[currentMode].items.slice(); for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
     function setupSpeech() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) { speechSupported = false; micStatus.textContent = 'Speech recognition isn\'t available in this browser \u2014 you can type your answers instead.'; micStatus.classList.add('bad'); footerNote.style.display = 'block'; startBtn.disabled = false; startBtn.textContent = 'Start round (typing mode)'; usingTyping = true; return; }
         speechSupported = true; recognition = new SR(); recognition.continuous = false; recognition.interimResults = true; recognition.lang = 'en-US';
-        recognition.onresult = event => { if (!roundActive) return; let transcript = ''; for (let i = event.resultIndex; i < event.results.length; i++)transcript += event.results[i][0].transcript; transcriptBox.classList.add('listening'); transcriptBox.innerHTML = escapeHtml(transcript.trim()) || '<span class="placeholder">' + MODES[currentMode].placeholder + '</span>'; if (current && (matchesItem(transcript, current) || matchesInterim(transcript, current))) handleCorrect(); };
+        recognition.onresult = event => { if (!roundActive) return; let transcript = ''; for (let i = event.resultIndex; i < event.results.length; i++)transcript += event.results[i][0].transcript; transcriptBox.classList.add('listening'); renderTranscript(transcript.trim()); if (current && (matchesItem(transcript, current) || matchesInterim(transcript, current))) handleCorrect(); };
         recognition.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { micStatus.textContent = 'Microphone access denied \u2014 switching to typed answers.'; micStatus.classList.add('bad'); footerNote.style.display = 'block'; speechSupported = false; } };
         recognition.onend = () => { if (roundActive && speechSupported) setTimeout(() => { if (roundActive && speechSupported) try { recognition.start(); } catch (e) { } }, 80); };
         micStatus.textContent = 'Microphone ready. Tap start and speak clearly for each ' + (currentMode === 'animals' ? 'animal.' : 'flag.'); startBtn.disabled = false;
@@ -161,7 +172,7 @@
     function goToMenu() { stopRound(); stopMusic(); current = null; fwRunning = false; fwParticles = []; fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height); newbestMsg.classList.remove('show'); goBestStat.classList.remove('new'); loadHighScore(); showPanel(panelStart); }
     function renderVisual(item, silhouette) { if (currentMode === 'flags') visualDisplay.innerHTML = '<img src="' + flagUrl(item.code) + '" alt="Flag to guess">'; else { animalRevealed = !silhouette; visualDisplay.innerHTML = '<span class="' + (silhouette ? 'animal-emoji' : 'animal-emoji revealed') + '">' + item.emoji + '</span>'; } }
     function revealAnimal() { if (currentMode !== 'animals' || animalRevealed) return; animalRevealed = true; const span = visualDisplay.querySelector('.animal-emoji'); if (span) span.classList.add('revealed'); }
-    function nextRound() { if (deckIndex >= deck.length) { deck = shuffledDeck(); deckIndex = 0; } current = deck[deckIndex++]; renderVisual(current, true); transcriptBox.classList.remove('listening'); transcriptBox.innerHTML = '<span class="placeholder">' + MODES[currentMode].placeholder + '</span>'; typeInput.value = ''; dialRing.style.stroke = ''; roundActive = true; timerStart = performance.now(); if (!usingTyping && speechSupported) try { recognition.start(); } catch (e) { } if (usingTyping) typeInput.focus(); tick(); }
+    function nextRound() { if (deckIndex >= deck.length) { deck = shuffledDeck(); deckIndex = 0; } current = deck[deckIndex++]; renderVisual(current, true); transcriptBox.classList.remove('listening'); renderTranscript(''); typeInput.value = ''; dialRing.style.stroke = ''; roundActive = true; timerStart = performance.now(); if (!usingTyping && speechSupported) try { recognition.start(); } catch (e) { } if (usingTyping) typeInput.focus(); tick(); }
     function tick() { if (!roundActive) return; const elapsed = performance.now() - timerStart, remaining = Math.max(0, ROUND_MS - elapsed), frac = remaining / ROUND_MS; dialRing.style.strokeDashoffset = (CIRC * (1 - frac)).toFixed(2); timerNum.textContent = (remaining / 1000).toFixed(1) + 's'; dialRing.classList.toggle('urgent', frac < .25); if (remaining <= 0) { handleTimeout(); return; } timerRAF = requestAnimationFrame(tick); }
     function stopRound() { roundActive = false; if (timerRAF) cancelAnimationFrame(timerRAF); if (recognition && !usingTyping) try { recognition.stop(); } catch (e) { } }
     function handleCorrect() { if (!roundActive) return; stopRound(); score++; scoreVal.textContent = String(score); revealAnimal(); playTone(523, .14, 'sine', .11); playTone(659, .2, 'sine', .1, .1); flashStamp('VERIFIED', 'var(--teal)'); setTimeout(nextRound, 650); }
