@@ -189,6 +189,23 @@ button{
 }
 .btn-secondary:hover{ background:var(--ink); color:var(--paper); }
 
+.audio-toggle{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  margin:14px auto 0;
+  padding:6px 8px;
+  background:none;
+  color:var(--ink-soft);
+  font-family:'JetBrains Mono', monospace;
+  font-size:10px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+.audio-toggle:hover{ color:var(--coral); }
+.audio-toggle[aria-pressed="true"]{ color:var(--teal); }
+
 .high-score-strip{
   display:flex; justify-content:space-between;
   font-family:'JetBrains Mono', monospace;
@@ -478,6 +495,9 @@ button{
         <span>Operator best</span>
         <b id="hs-display">—</b>
       </div>
+      <button class="audio-toggle" id="audio-toggle" type="button" aria-pressed="false" title="Mute music and sound effects">
+        <span id="audio-icon">♫</span> <span id="audio-label">Sound on</span>
+      </button>
     </div>
 
     <!-- GAME PANEL -->
@@ -720,6 +740,9 @@ button{
   const rulesList  = document.getElementById('rules-list');
   const tabFlags   = document.getElementById('tab-flags');
   const tabAnimals = document.getElementById('tab-animals');
+  const audioToggle = document.getElementById('audio-toggle');
+  const audioIcon = document.getElementById('audio-icon');
+  const audioLabel = document.getElementById('audio-label');
 
   dialRing.setAttribute('stroke-dasharray', CIRC.toFixed(2));
 
@@ -735,6 +758,84 @@ button{
   let speechSupported = false;
   let usingTyping = false;
   let animalRevealed = false;
+  let audioContext = null;
+  let musicGain = null;
+  let musicTimer = null;
+  let soundMuted = false;
+
+  // Generate lightweight audio locally so the game works as a standalone file.
+  function ensureAudio(){
+    if(!audioContext){
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if(!AudioContext) return false;
+      audioContext = new AudioContext();
+      musicGain = audioContext.createGain();
+      musicGain.gain.value = 0.035;
+      musicGain.connect(audioContext.destination);
+    }
+    if(audioContext.state === 'suspended') audioContext.resume();
+    return true;
+  }
+
+  function playTone(frequency, duration, type, volume, delay){
+    if(soundMuted || !ensureAudio()) return;
+    const start = audioContext.currentTime + (delay || 0);
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = type || 'sine';
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume || 0.06, start + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.02);
+  }
+
+  function startMusic(){
+    if(soundMuted || !ensureAudio() || musicTimer) return;
+    const notes = [196, 247, 294, 247, 220, 262, 330, 262];
+    let noteIndex = 0;
+    const playNote = () => {
+      if(soundMuted || !audioContext) return;
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const now = audioContext.currentTime;
+      oscillator.type = 'triangle';
+      oscillator.frequency.value = notes[noteIndex++ % notes.length];
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.045, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+      oscillator.connect(gain);
+      gain.connect(musicGain);
+      oscillator.start(now);
+      oscillator.stop(now + 0.45);
+    };
+    playNote();
+    musicTimer = setInterval(playNote, 500);
+  }
+
+  function stopMusic(){
+    if(musicTimer){
+      clearInterval(musicTimer);
+      musicTimer = null;
+    }
+  }
+
+  function updateAudioToggle(){
+    audioToggle.setAttribute('aria-pressed', String(soundMuted));
+    audioToggle.title = soundMuted ? 'Enable music and sound effects' : 'Mute music and sound effects';
+    audioIcon.textContent = soundMuted ? '♪̸' : '♫';
+    audioLabel.textContent = soundMuted ? 'Sound off' : 'Sound on';
+  }
+
+  audioToggle.addEventListener('click', () => {
+    soundMuted = !soundMuted;
+    updateAudioToggle();
+    if(soundMuted) stopMusic();
+    else if(roundActive) startMusic();
+  });
 
   // ---------------- Mode switching ----------------
   function applyModeText(){
@@ -880,6 +981,9 @@ button{
   }
 
   function startGame(){
+    ensureAudio();
+    startMusic();
+    playTone(330, 0.16, 'sine', 0.05);
     score = 0;
     scoreVal.textContent = '0';
     bestVal.textContent = highScore;
@@ -893,6 +997,7 @@ button{
 
   function goToMenu(){
     stopRound();
+    stopMusic();
     current = null;
     fwRunning = false;
     fwParticles = [];
@@ -978,12 +1083,15 @@ button{
     score++;
     scoreVal.textContent = String(score);
     revealAnimal();
+    playTone(523, 0.14, 'sine', 0.07);
+    playTone(659, 0.2, 'sine', 0.06, 0.1);
     flashStamp('VERIFIED', 'var(--teal)');
     setTimeout(nextRound, 650);
   }
 
   function handleTimeout(){
     stopRound();
+    playTone(146, 0.35, 'sawtooth', 0.055);
     revealAnimal();
     if(currentMode === 'animals'){
       setTimeout(endGame, 700);
@@ -1016,6 +1124,9 @@ button{
     newbestMsg.classList.remove('show');
     goBestStat.classList.remove('new');
     if(isNew){
+      playTone(523, 0.16, 'triangle', 0.07);
+      playTone(659, 0.16, 'triangle', 0.07, 0.12);
+      playTone(784, 0.28, 'triangle', 0.07, 0.24);
       newbestMsg.style.display = 'block';
       // restart pop animation
       void newbestMsg.offsetWidth;
@@ -1118,6 +1229,8 @@ button{
     if(val && current && matchesItem(val, current)){
       handleCorrect();
     } else {
+      playTone(220, 0.16, 'square', 0.045);
+      playTone(165, 0.2, 'square', 0.04, 0.12);
       typeInput.value = '';
       typeInput.placeholder = 'Not quite — try again…';
     }
@@ -1145,6 +1258,7 @@ button{
   menuBtnOver.addEventListener('click', goToMenu);
 
   applyModeText();
+  updateAudioToggle();
   loadHighScore();
   setupSpeech();
 
