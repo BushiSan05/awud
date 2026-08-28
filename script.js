@@ -138,12 +138,19 @@
     changeUserBtn.addEventListener('click', changeUser);
     function normalize(str) { return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim(); }
     function matchesItem(spoken, item) { const n = normalize(spoken); return !!n && item.aliases.some(alias => n === alias || n.includes(alias)); }
+    function matchesInterim(spoken, item) {
+        const n = normalize(spoken);
+        if (n.length < 4 || matchesItem(n, item)) return matchesItem(n, item);
+        const matchingAliases = MODES[currentMode].items.flatMap(candidate => candidate.aliases)
+            .filter(alias => alias.startsWith(n));
+        return matchingAliases.length === 1 && item.aliases.some(alias => alias.startsWith(n));
+    }
     function shuffledDeck() { const arr = MODES[currentMode].items.slice(); for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
     function setupSpeech() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) { speechSupported = false; micStatus.textContent = 'Speech recognition isn\'t available in this browser \u2014 you can type your answers instead.'; micStatus.classList.add('bad'); footerNote.style.display = 'block'; startBtn.disabled = false; startBtn.textContent = 'Start round (typing mode)'; usingTyping = true; return; }
         speechSupported = true; recognition = new SR(); recognition.continuous = false; recognition.interimResults = true; recognition.lang = 'en-US';
-        recognition.onresult = event => { if (!roundActive) return; let transcript = ''; for (let i = event.resultIndex; i < event.results.length; i++)transcript += event.results[i][0].transcript; transcriptBox.classList.add('listening'); transcriptBox.innerHTML = escapeHtml(transcript.trim()) || '<span class="placeholder">Say the country name\u2026</span>'; if (current && matchesItem(transcript, current)) handleCorrect(); };
+        recognition.onresult = event => { if (!roundActive) return; let transcript = ''; for (let i = event.resultIndex; i < event.results.length; i++)transcript += event.results[i][0].transcript; transcriptBox.classList.add('listening'); transcriptBox.innerHTML = escapeHtml(transcript.trim()) || '<span class="placeholder">Say the country name\u2026</span>'; if (current && (matchesItem(transcript, current) || matchesInterim(transcript, current))) handleCorrect(); };
         recognition.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { micStatus.textContent = 'Microphone access denied \u2014 switching to typed answers.'; micStatus.classList.add('bad'); footerNote.style.display = 'block'; speechSupported = false; } };
         recognition.onend = () => { if (roundActive && speechSupported) setTimeout(() => { if (roundActive && speechSupported) try { recognition.start(); } catch (e) { } }, 80); };
         micStatus.textContent = 'Microphone ready. Tap start and speak clearly for each flag.'; startBtn.disabled = false;
